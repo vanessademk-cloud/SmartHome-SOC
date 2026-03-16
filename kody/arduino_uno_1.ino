@@ -1,3 +1,19 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <DHT.h>
+
+// ---------- OLED ----------
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// ---------- DHT11 ----------
+#define DHTPIN A2
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
 // Ultrazvukový senzor
 #define TRIG_PIN 10
 #define ECHO_PIN 11
@@ -42,6 +58,10 @@ int led3State = LOW;
 int lastButton3State;
 int currentButton3State;
 
+// OLED update
+unsigned long previousDisplayMillis = 0;
+const unsigned long displayInterval = 2000;
+
 // ---------- SETUP ----------
 void setup() {
   Serial.begin(9600);
@@ -69,18 +89,38 @@ void setup() {
   // Zvukový senzor
   pinMode(SOUND_LED, OUTPUT);
   digitalWrite(SOUND_LED, LOW);
-  attachInterrupt(digitalPinToInterrupt(SOUND_DIGITAL), stop, RISING);
+  attachInterrupt(digitalPinToInterrupt(SOUND_DIGITAL), stopSound, RISING);
 
   currentButton1State = digitalRead(BUTTON1_PIN);
   currentButton2State = digitalRead(BUTTON2_PIN);
   currentButton3State = digitalRead(BUTTON3_PIN);
+
+  // DHT11
+  dht.begin();
+
+  // OLED
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("OLED nenajdeny");
+    while (1);
+  }
+
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println("UNO Smart Module");
+  display.println("Start...");
+  display.display();
+  delay(1500);
 }
 
 // ---------- LOOP ----------
 void loop() {
-  checkClap();          
-  handleButtons();      
-  measureDistance();    
+  checkClap();
+  handleButtons();
+  measureDistance();
+  updateOLED();
+
   delay(50);
 }
 
@@ -90,7 +130,6 @@ void checkClap() {
 
   if (data > 35) {
     if (millis() - poslednyTlesk > 40) {
-
       stavLED = !stavLED;
       digitalWrite(SOUND_LED, stavLED);
 
@@ -102,8 +141,8 @@ void checkClap() {
   }
 }
 
-void stop() {
-  Serial.println("Detekovan hluk modulem!");
+void stopSound() {
+  // do interrupt funkcie radsej nedavaj Serial.println
 }
 
 // ---------- Ultrazvukový senzor ----------
@@ -122,7 +161,7 @@ void measureDistance() {
     digitalWrite(LED_YELLOW, LOW);
     digitalWrite(LED_RED, LOW);
   } 
-  else if (distance > 6 and distance < 12) {
+  else if (distance > 6 && distance < 12) {
     digitalWrite(LED_GREEN, LOW);
     digitalWrite(LED_YELLOW, HIGH);
     digitalWrite(LED_RED, LOW);
@@ -162,4 +201,33 @@ void handleButtons() {
     led3State = !led3State;
     digitalWrite(LED3_PIN, led3State);
   }
+}
+
+// ---------- OLED + DHT11 ----------
+void updateOLED() {
+  if (millis() - previousDisplayMillis < displayInterval) return;
+  previousDisplayMillis = millis();
+
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println("Smart Home");
+
+  display.setCursor(0, 14);
+  if (isnan(temperature) || isnan(humidity)) {
+    display.println("DHT chyba");
+  } else {
+    display.print("Teplota: ");
+    display.print(temperature);
+    display.println(" C");
+
+    display.print("Vlhkost: ");
+    display.print(humidity);
+    display.println(" %");
+  }
+
+  display.display();
 }
