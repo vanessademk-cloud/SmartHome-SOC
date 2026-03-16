@@ -2,82 +2,124 @@
 #include <SoftwareSerial.h>
 #include <Servo.h>
 
-SoftwareSerial mySerial(2, 3); 
+// -------------------- Fingerprint --------------------
+SoftwareSerial mySerial(2, 3);   // RX, TX pre fingerprint
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 
+// -------------------- Servo --------------------
 Servo myServo;
+#define SERVO_PIN 9
 
-// ---- LDR + LED ----
+// -------------------- Soil moisture + pump --------------------
+#define SOIL_PIN A2
+#define PUMP_PIN 12
+int soilThreshold = 600;   // uprav podľa reálnych hodnôt senzora
+
+// -------------------- LDR + LED --------------------
 #define LDR_PIN A0
-#define LED_PIN 6      
+#define LED_PIN 6
+int darkThreshold = 500;
 
-// ---- Fireplace LED ----
-#define FIRE_LED 10    
+// -------------------- Servo stav --------------------
+bool doorOpen = false;
+unsigned long servoOpenedTime = 0;
+unsigned long servoOpenDuration = 3000;
 
-//  ---- Prah tmy  ---- 
-int darkThreshold = 100;
-
-// ---- Premenné pre krb efekt ----
-unsigned long previousMillis = 0;
-int flickerInterval = 60;
+// -------------------- Fingerprint kontrola --------------------
+unsigned long previousFingerMillis = 0;
+unsigned long fingerInterval = 500;
 
 void setup() {
+  Serial.begin(9600);
 
   // Servo
-  myServo.attach(9);
-  myServo.write(0);   
+  myServo.attach(SERVO_PIN);
+  myServo.write(0);
 
-  // LED výstupy
+  // Piny
   pinMode(LED_PIN, OUTPUT);
-  pinMode(FIRE_LED, OUTPUT);
+  pinMode(PUMP_PIN, OUTPUT);
 
-  // Náhodné blikanie
-  randomSeed(analogRead(A1));
+  // Relé vypnuté na začiatku (active LOW)
+  digitalWrite(PUMP_PIN, HIGH);
 
   // Fingerprint
   finger.begin(57600);
-  if (!finger.verifyPassword()) {
-    while (1); // zastaví program ak senzor nefunguje
+
+  if (finger.verifyPassword()) {
+    Serial.println("Fingerprint senzor je pripraveny");
+  } else {
+    Serial.println("Fingerprint senzor nebol najdeny");
   }
 }
 
 void loop() {
+  handleLDR();
+  handleSoilAndPump();
+  handleFingerprint();
+  handleServoClose();
+}
 
-  // ---- LDR LED  ----
+// --------------------------------------------------
+// Fotorezistor a LED
+// --------------------------------------------------
+void handleLDR() {
   int ldrValue = analogRead(LDR_PIN);
 
   if (ldrValue < darkThreshold) {
-    digitalWrite(LED_PIN, HIGH);   // svieti
+    digitalWrite(LED_PIN, HIGH);
   } else {
-    digitalWrite(LED_PIN, LOW);    // vypnutá
+    digitalWrite(LED_PIN, LOW);
   }
-
-  // ---- Fireplace efekt ----
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= flickerInterval) {
-    previousMillis = currentMillis;
-
-    int randomBrightness = random(150, 255);
-    analogWrite(FIRE_LED, randomBrightness);
-
-    flickerInterval = random(40, 120);
-  }
-
-  // ---- Fingerprint systém ----
-  int id = getFingerprintID();
-
-  if (id >= 0) {
-    myServo.write(90);   // odomkni
-    delay(5000);
-    myServo.write(0);    // zamkni
-  }
-
-  delay(100);
 }
 
-int getFingerprintID() {
-  if (finger.getImage() != FINGERPRINT_OK) return -1;
-  if (finger.image2Tz() != FINGERPRINT_OK) return -1;
-  if (finger.fingerSearch() != FINGERPRINT_OK) return -1;
-  return finger.fingerID;
+// --------------------------------------------------
+// Vlhkost pôdy a čerpadlo
+// --------------------------------------------------
+void handleSoilAndPump() {
+  int soilValue = analogRead(SOIL_PIN);
+
+  Serial.print("Soil value: ");
+  Serial.println(soilValue);
+
+  if (soilValue > soilThreshold) {
+    digitalWrite(PUMP_PIN, LOW);   // zapne relé = zapne čerpadlo
+  } else {
+    digitalWrite(PUMP_PIN, HIGH);  // vypne relé = vypne čerpadlo
+  }
+}
+
+// --------------------------------------------------
+// Fingerprint a servo
+// --------------------------------------------------
+void handleFingerprint() {
+  if (millis() - previousFingerMillis >= fingerInterval) {
+    previousFingerMillis = millis();
+
+    uint8_t p = finger.getImage();
+    if (p != FINGERPRINT_OK) return;
+
+    p = finger.image2Tz();
+    if (p != FINGERPRINT_OK) return;
+
+    p = finger.fingerFastSearch();
+    if (p == FINGERPRINT_OK) {
+      Serial.println("Odtlacok rozpoznany");
+
+      myServo.write(90);
+      doorOpen = true;
+      servoOpenedTime = millis();
+    }
+  }
+}
+
+// --------------------------------------------------
+// Automatické zatvorenie serva
+// --------------------------------------------------
+void handleServoClose() {
+  if (doorOpen && millis() - servoOpenedTime >= servoOpenDuration) {
+    myServo.write(0);
+    doorOpen = false;
+    Serial.println("Servo zatvorene");
+  }
 }
