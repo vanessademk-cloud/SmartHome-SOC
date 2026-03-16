@@ -41,7 +41,7 @@ Používateľ tak môže sledovať aktuálny stav systému a jednotlivých zaria
 * Blynk
 * rôzne senzory a akčné prvky (servo motor, ventilátor, čerpadlo)
 
-## Autor
+## Autor Vanessa Demková
 
 Projekt bol vytvorený v rámci **Stredoškolskej odbornej činnosti (SOČ)** v oblasti **Internet vecí (IoT) a inteligentných domácností**.
 
