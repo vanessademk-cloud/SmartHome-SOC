@@ -214,7 +214,7 @@ void updateOLED() {
   display.clearDisplay();
   display.setTextSize(1);
   display.setCursor(0, 0);
-  display.println("Smart Home");
+  display.println("Smart Hpme");
 
   display.setCursor(0, 14);
   if (isnan(temperature) || isnan(humidity)) {
