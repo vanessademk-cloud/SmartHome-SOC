@@ -1,6 +1,6 @@
 #define BLYNK_TEMPLATE_ID "################"
-#define BLYNK_TEMPLATE_NAME "###################"
-#define BLYNK_AUTH_TOKEN "##########################"
+#define BLYNK_TEMPLATE_NAME "#####################"
+#define BLYNK_AUTH_TOKEN "########################"
 
 #include <Wire.h>
 #include <WiFiS3.h>
@@ -8,8 +8,8 @@
 #include <DHT.h>
 
 // ---- WiFi ----
-char ssid[] = "######";
-char pass[] = "#######";
+char ssid[] = "##########";
+char pass[] = "###########";
 
 // ---- DHT11 ----
 #define DHTPIN 11
@@ -21,7 +21,7 @@ DHT dht(DHTPIN, DHTTYPE);
 #define GAS_THRESHOLD 600
 
 // ---- Flame Sensor ----
-#define FLAME_PIN 8
+#define FLAME_PIN 5
 
 // ---- BUZZER ----
 #define BUZZER_PIN 2
@@ -30,7 +30,7 @@ DHT dht(DHTPIN, DHTTYPE);
 #define FAN_PIN 3
 int fanSpeed = 0;
 
-// ---- LED + TLAČÍTKO ----
+// ---- NOVÁ LED + TLAČÍTKO ----
 #define BUTTON4_PIN 4
 #define LED4_PIN 12
 
@@ -42,7 +42,7 @@ const unsigned long debounceDelay = 50;
 
 // ---- Auto Fan ----
 const int HIGH_TEMP = 25;
-const int LOW_TEMP  = 24;
+const int LOW_TEMP  = 23;
 bool autoFan = false;
 
 // ---- Blynk slider pre FAN ----
@@ -135,6 +135,7 @@ void loop() {
     if (!isnan(h)) Blynk.virtualWrite(V1, h);
     Blynk.virtualWrite(V3, gasPercent);
     Blynk.virtualWrite(V4, flameDetected);
+    Blynk.virtualWrite(V5, flameDetected);
     Blynk.virtualWrite(V7, fanSpeed);
     Blynk.virtualWrite(V6, led4State);
 
