@@ -10,7 +10,7 @@ Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 Servo myServo;
 #define SERVO_PIN 9
 
-// -------------------- Soil moisture + pump --------------------
+// -------------------Soil moisture + pump --------------------
 #define SOIL_PIN A2
 #define PUMP_PIN 12
 int soilThreshold = 600;   // uprav podľa reálnych hodnôt senzora
@@ -18,7 +18,7 @@ int soilThreshold = 600;   // uprav podľa reálnych hodnôt senzora
 // -------------------- LDR + LED --------------------
 #define LDR_PIN A0
 #define LED_PIN 6
-int darkThreshold = 500;
+int darkThreshold = 50;
 
 // -------------------- Servo stav --------------------
 bool doorOpen = false;
